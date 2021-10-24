@@ -1,6 +1,8 @@
 # Sidecast
 CLI tool for sideloading Raycast extensions
 
+![image](https://user-images.githubusercontent.com/76178582/138618028-26fe5c9e-2cff-4480-95b8-cd8ae4f8412f.png)
+
 ## Installation
 ```
 npm install -g sidecast
