@@ -1,0 +1,32 @@
+{
+  "name": "sidecast",
+  "version": "1.0.0",
+  "description": "Sideload Raycast extensions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "sidecast": "bin/sidecast.js"
+  },
+  "author": "YodaLightsabr",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "download-git-repo": "^3.0.2",
+    "node-fetch": "^2.6.1",
+    "stump.js": "^1.1.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YodaLightsabr/sidecast.git"
+  },
+  "keywords": [
+    "raycast"
+  ],
+  "bugs": {
+    "url": "https://github.com/YodaLightsabr/sidecast/issues"
+  },
+  "homepage": "https://github.com/YodaLightsabr/sidecast#readme"
+}
