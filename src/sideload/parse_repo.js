@@ -2,6 +2,7 @@ import fetch from "node-fetch";
 import os from "os";
 
 const parse = async (repo) => {
+  repo = repo.toLowerCase();
   let [user, repoName] = repo.split("/");
   if (!repoName) {
     throw new Error(`Invalid repo`);
