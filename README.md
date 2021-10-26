@@ -12,6 +12,7 @@ npm install -g sidecast
  - `sidecast help` - Open the help menu
  - `sidecast sideload <github repo> [-v, verbose]` - Sideload an extension (GitHub Repo is user/repo#branch, defaulting to master) [install, i]
  - `sidecast remove <extension name> [-v, verbose]` - Remove the files for an extension [purge]
+ - `version` - Check Sidecast version [v]
 
 ## Examples
 ### How to sideload an extension

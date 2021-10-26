@@ -54,6 +54,9 @@ ${chalk.blue(
 ${chalk.blue(
   "remove <extension name> [-v, --verbose]"
 )} - Remove the files for an extension ${chalk.blueBright("[purge]")}
+${chalk.blue(
+  "version"
+)} - Check Sidecast version ${chalk.blueBright("[v]")}
 
 More commands will be added soon!`
       )
@@ -212,9 +215,14 @@ ${chalk.bold("2.")} Navigate to ${chalk.blue(
         );
     }
   },
+  version: () => {
+    console.log("\n" + chalk.bgRed.bold.white(ascii));
+    console.log('Version 1.1.2');
+  },
   install: (...args) => commands.sideload(...args),
   purge: (...args) => commands.remove(...args),
   i: (...args) => commands.sideload(...args),
+  v: (...args) => commands.version(...args),
 };
 
 const defaultCommand = (command) => {
