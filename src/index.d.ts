@@ -1,2 +1,4 @@
 declare const sideload: Function;
-export default sideload;
+export const sideload;
+declare const remove: Function;
+export const remove;
