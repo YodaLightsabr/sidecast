@@ -8,10 +8,10 @@ const readline = createInterface({
   output: process.stdout,
 });
 
-import fs from "fs/promises";
 import { exec } from "child_process";
 import parse from "../src/sideload/parse_repo.js";
 import download from "../src/sideload/download_repo.js";
+import removeExtension from "../src/remove/index.js";
 
 const ascii =
   "      _______. __   _______   _______   ______      ___           _______..___________. \r\n     /       ||  | |       \\ |   ____| /      |    /   \\         /       ||           | \r\n    |   (----`|  | |  .--.  ||  |__   |  ,----'   /  ^  \\       |   (----``---|  |----` \r\n     \\   \\    |  | |  |  |  ||   __|  |  |       /  /_\\  \\       \\   \\        |  |      \r\n .----)   |   |  | |  '--'  ||  |____ |  `----. /  _____  \\  .----)   |       |  |      \r\n |_______/    |__| |_______/ |_______| \\______|/__/     \\__\\ |_______/        |__|      \r\n                                                                                        ";
@@ -142,39 +142,38 @@ ${chalk.bold("2.")} Navigate to ${chalk.blue(
     }
   },
   remove: async ([extension, ...args]) => {
-    let correctPath, extName;
+    let extName;
     try {
-      const { repo, destination } = await parse(extension);
-      await fs.access(destination);
-      correctPath = destination;
-      extName = repo;
-    } catch (err) {
-      return stump.error(
-        "The extension folder cannot be located. Please try manually deleting it instead."
-      );
-    }
-    try {
-      await fs.rm(correctPath, { recursive: true, force: true });
-      stump.success(
-        "The extension " +
-          chalk.blue(extName) +
-          " was removed. You will also have to uninstall it from within Raycast by finding the extension, clicking more actions, and selecting uninstall."
-      );
-    } catch (err) {
-      if (args.includes("-v") || args.includes("--verbose"))
+      extName = await removeExtension(extension);
+    } catch (error) {
+      if (error.message === "Invalid extension") {
         return stump.error(
-          "There was an error while trying to remove this extension. For more details, use the " +
-            chalk.blue("--verbose") +
-            "(" +
-            chalk.blue("-v") +
-            ") flag to use verbose mode."
+          "The extension folder cannot be located. Please try manually deleting it instead."
         );
-      else
-        return stump.error(
-          "There was an error while trying to remove this extension. Errors: " +
-            err
-        );
+      } else if (error.message === "Could not remove extension") {
+        if (args.includes("-v") || args.includes("--verbose")) {
+          return stump.error(
+            "There was an error while trying to remove this extension. For more details, use the " +
+              chalk.blue("--verbose") +
+              "(" +
+              chalk.blue("-v") +
+              ") flag to use verbose mode."
+          );
+        } else {
+          return stump.error(
+            "There was an error while trying to remove this extension. Errors: " +
+              error
+          );
+        }
+      } else {
+        return stump.error(error.message);
+      }
     }
+    stump.success(
+      "The extension " +
+        chalk.blue(extName) +
+        " was removed. You will also have to uninstall it from within Raycast by finding the extension, clicking more actions, and selecting uninstall."
+    );
   },
   version: () => {
     console.log("\n" + chalk.bgRed.bold.white(ascii));
