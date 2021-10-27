@@ -11,8 +11,9 @@ const readline = createInterface({
 
 import fs from "fs/promises";
 import { exec } from "child_process";
-import fetch from "node-fetch";
-import download from "download-git-repo";
+import parse from "../src/sideload/parse_repo.js";
+import download from "../src/sideload/download_repo.js";
+
 const ascii =
   "      _______. __   _______   _______   ______      ___           _______..___________. \r\n     /       ||  | |       \\ |   ____| /      |    /   \\         /       ||           | \r\n    |   (----`|  | |  .--.  ||  |__   |  ,----'   /  ^  \\       |   (----``---|  |----` \r\n     \\   \\    |  | |  |  |  ||   __|  |  |       /  /_\\  \\       \\   \\        |  |      \r\n .----)   |   |  | |  '--'  ||  |____ |  `----. /  _____  \\  .----)   |       |  |      \r\n |_______/    |__| |_______/ |_______| \\______|/__/     \\__\\ |_______/        |__|      \r\n                                                                                        ";
 const params = process.argv;
@@ -54,9 +55,7 @@ ${chalk.blue(
 ${chalk.blue(
   "remove <extension name> [-v, --verbose]"
 )} - Remove the files for an extension ${chalk.blueBright("[purge]")}
-${chalk.blue(
-  "version"
-)} - Check Sidecast version ${chalk.blueBright("[v]")}
+${chalk.blue("version")} - Check Sidecast version ${chalk.blueBright("[v]")}
 
 More commands will be added soon!`
       )
@@ -66,111 +65,82 @@ More commands will be added soon!`
     stump.info("Validating repository...");
     if (!ghRepo)
       return stump.error("You must supply a URL or GitHub repository");
-    let response = await fetch("https://api.github.com/repos/" + ghRepo);
-    let json = await response.json();
-    if (json.message == "Not Found") {
-      if (validURL(ghRepo)) {
-        ghRepo = "direct:" + ghRepo;
-      } else {
+    let repo, destination;
+    try {
+      const parsed = await parse(ghRepo);
+      repo = parsed.repo;
+      destination = parsed.destination;
+      stump.info(
+        "Downloading " +
+          chalk.blue(repo) +
+          " to " +
+          chalk.blue(destination) +
+          "..."
+      );
+    } catch (error) {
+      if (error.message === "Invalid repo") {
         return stump.error(
           "Must be a URL or GitHub repository (user/repo#branch)"
         );
+      } else {
+        return stump.error(error.message);
       }
     }
-    if (!ghRepo.startsWith("direct:") && !ghRepo.includes("#"))
-      ghRepo += "#" + json.default_branch;
-    let fragments;
-    if (ghRepo.startsWith("direct:")) {
-      fragments = fragments.filter((frag) => frag !== "");
-      fragments = [
-        fragments[fragments.length - 2],
-        fragments[fragments.length - 1],
-      ];
-    } else {
-      fragments = ghRepo.split("/");
-      fragments = fragments.filter((frag) => frag !== "");
-      if (fragments[fragments.length - 1].includes("#"))
-        fragments[fragments.length - 1] = fragments[
-          fragments.length - 1
-        ].substring(0, fragments[fragments.length - 1].indexOf("#"));
-    }
-    let destination =
-      os.homedir() +
-      "/_sidecast/" +
-      (
-        (fragments.length >= 2 ? fragments[fragments.length - 2] + ":" : "") +
-        fragments[fragments.length - 1]
-      ).toLowerCase();
-    stump.info(
-      "Downloading " +
-        chalk.blue(fragments[fragments.length - 1]) +
-        " to " +
-        chalk.blue(destination) +
-        "..."
-    );
-    await new Promise((resolve, reject) => {
-      download(ghRepo, destination, (err) => {
-        if (err) {
-          return stump.error(
-            "There was an error while trying to download this extension. Did you specify the wrong URL or branch?"
+    try {
+      await download(repo, destination);
+      stump.info("Installing dependencies...");
+      var yourscript = exec(
+        "npm install",
+        { cwd: destination },
+        (error, stdout, stderr) => {
+          stump.success(
+            "Extension downloaded! Before the extension can be built, you have to load it first.\n" +
+              `
+${chalk.bold("1.")} Open Raycast and run the ${chalk.blue(
+                "Import Extension " + chalk.dim("Developer")
+              )} command.
+${chalk.bold("2.")} Navigate to ${chalk.blue(
+                "~/_sidecast"
+              )} and select ${chalk.blue(repo)}`
+          );
+          readline.question(
+            `${chalk.bold("3.")} Press enter to continue`,
+            () => {
+              console.log("");
+              stump.info("Building extension...");
+              exec(
+                "./node_modules/@raycast/api/bin/ray build -e dist",
+                { cwd: destination },
+                (error, stdout, stderr) => {
+                  console.log(stdout, stderr);
+                  if (stderr) {
+                    if (args.includes("-v") || args.includes("--verbose"))
+                      return stump.error(
+                        "There was an error while trying to build this extension. For more details, use the " +
+                          chalk.blue("--verbose") +
+                          "(" +
+                          chalk.blue("-v") +
+                          ") flag to use verbose mode."
+                      );
+                    else
+                      return stump.error(
+                        "There was an error while trying to build this extension. Errors: " +
+                          stdout
+                      );
+                  }
+                  stump.success("Extension built! You can start using it.");
+                  resolve();
+                }
+              );
+            }
           );
         }
-        stump.info("Installing dependencies...");
-        var yourscript = exec(
-          "npm install",
-          { cwd: destination },
-          (error, stdout, stderr) => {
-            stump.success(
-              "Extension downloaded! Before the extension can be built, you have to load it first.\n" +
-                `
-${chalk.bold("1.")} Open Raycast and run the ${chalk.blue(
-                  "Import Extension " + chalk.dim("Developer")
-                )} command.
-${chalk.bold("2.")} Navigate to ${chalk.blue(
-                  "~/_sidecast"
-                )} and select ${chalk.blue(
-                  (
-                    (fragments.length >= 2
-                      ? fragments[fragments.length - 2] + "/"
-                      : "") + fragments[fragments.length - 1]
-                  ).toLowerCase()
-                )}`
-            );
-            readline.question(
-              `${chalk.bold("3.")} Press enter to continue`,
-              () => {
-                console.log("");
-                stump.info("Building extension...");
-                exec(
-                  "./node_modules/@raycast/api/bin/ray build -e dist",
-                  { cwd: destination },
-                  (error, stdout, stderr) => {
-                    console.log(stdout, stderr);
-                    if (stderr) {
-                      if (args.includes("-v") || args.includes("--verbose"))
-                        return stump.error(
-                          "There was an error while trying to build this extension. For more details, use the " +
-                            chalk.blue("--verbose") +
-                            "(" +
-                            chalk.blue("-v") +
-                            ") flag to use verbose mode."
-                        );
-                      else
-                        return stump.error(
-                          "There was an error while trying to build this extension. Errors: " +
-                            stdout
-                        );
-                    }
-                    stump.success("Extension built! You can start using it.");
-                    resolve();
-                  }
-                );
-              }
-            );
-          }
-        );
-      });
-    });
+      );
+    } catch (error) {
+      return stump.error(
+        "There was an error while trying to download this extension. Did you specify the wrong URL or branch?"
+      );
+    }
   },
   remove: async ([extension, ...args]) => {
     let correctPath;
@@ -217,7 +187,7 @@ ${chalk.bold("2.")} Navigate to ${chalk.blue(
   },
   version: () => {
     console.log("\n" + chalk.bgRed.bold.white(ascii));
-    console.log('Version 1.1.2');
+    console.log("Version 1.1.2");
   },
   install: (...args) => commands.sideload(...args),
   purge: (...args) => commands.remove(...args),
