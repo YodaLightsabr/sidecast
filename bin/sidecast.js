@@ -1,7 +1,6 @@
 #! /usr/bin/env node
 import chalk from "chalk";
 import Stump from "stump.js";
-import os from "os";
 const stump = new Stump(["Debug"]);
 import { createInterface } from "readline";
 const readline = createInterface({
@@ -143,30 +142,22 @@ ${chalk.bold("2.")} Navigate to ${chalk.blue(
     }
   },
   remove: async ([extension, ...args]) => {
-    let correctPath;
+    let correctPath, extName;
     try {
-      let path = os.homedir() + "/_sidecast/" + extension.toLowerCase();
-      await fs.access(path);
-      correctPath = path;
+      const { repo, destination } = await parse(extension);
+      await fs.access(destination);
+      correctPath = destination;
+      extName = repo;
     } catch (err) {
-      try {
-        let path =
-          os.homedir() +
-          "/_sidecast/" +
-          extension.toLowerCase().split("/").join(":");
-        await fs.access(path);
-        correctPath = path;
-      } catch (err) {
-        return stump.error(
-          "The extension folder cannot be located. Please try manually deleting it instead."
-        );
-      }
+      return stump.error(
+        "The extension folder cannot be located. Please try manually deleting it instead."
+      );
     }
     try {
-      fs.rm(correctPath, { recursive: true, force: true });
+      await fs.rm(correctPath, { recursive: true, force: true });
       stump.success(
         "The extension " +
-          chalk.blue(extension) +
+          chalk.blue(extName) +
           " was removed. You will also have to uninstall it from within Raycast by finding the extension, clicking more actions, and selecting uninstall."
       );
     } catch (err) {
